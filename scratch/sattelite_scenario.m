@@ -22,6 +22,7 @@ gsUE = groundStation(satscene, ...
 %% Find the access intervals
 ac = access(constellation,gsUE);
 intvls = accessIntervals(ac);
+% play(satscene)
 
 %% Play the sat scene defined on tle with ue 
 % play(satscene);
@@ -51,6 +52,8 @@ for i = 1:16
     [~,~,distanceSatToUe(i)] = aer(gsUE, constellation(satNumber), orbitTime);
 end
 
-play(satscene)
+toaSatToUe = distanceSatToUe / physconst("LightSpeed");
+
+tdoa = toaSatToUe(end)-(toaSatToUe(1:end-1));
 
 
