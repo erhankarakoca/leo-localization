@@ -1,0 +1,45 @@
+clear all;
+close all;
+clc;
+%% Create a satellite scenario
+satscene = satelliteScenario;
+
+% Add satellites from TLE file.
+tleFile = "leoSatelliteConstellation.tle";
+constellation = satellite(satscene, tleFile);
+
+% Define ue to be ground station Lat Long Alt;
+ueStation = [40.786648, 29.449502, 182];
+gs = groundStation(satscene, ueStation(1), ueStation(2));
+
+
+%% Find the access intervals
+ac = access(constellation,gs);
+intvls = accessIntervals(ac);
+
+%% Play the sat scene defined on tle with ue 
+% play(satscene);
+
+%% Any satellite can be selected from the viewer 
+% Be just sure it it can access to the groun station (ue)
+satNumber = 19;
+referenceSatellite = "Satellite "+string(satNumber) ;
+rows = matches(intvls.Source, referenceSatellite);
+% find specific acces-in times for the defined satellite
+startEndTimes = table2array(intvls(rows, ["StartTime", "EndTime"]));
+startTime = startEndTimes(1);
+endTime = startEndTimes(2);
+
+%% Read tle to calculate specific satellite position and speed
+sampleTime = 60;
+sc = satelliteScenario(startTime,endTime,sampleTime);
+constellationInterval = satellite(sc, tleFile);
+gs = groundStation(sc, ueStation(1), ueStation(2));
+acInterval = access(constellationInterval,gs);
+tleStruct = tleread('leoSatelliteConstellation.tle');
+[r,v] = propagateOrbit(startTime:endTime, tleStruct(satNumber));
+r = squeeze(r);
+v = squeeze(v);
+play(sc)
+
+
