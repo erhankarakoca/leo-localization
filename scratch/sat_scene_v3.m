@@ -46,7 +46,7 @@ end
 c = physconst("LightSpeed");
 toaSatToUe = distanceSatToUe / c ;
 
-selectedTimeInstants = [1,5,9,12];
+selectedTimeInstants = [1,5,9,14];
 
 TOAs = toaSatToUe(selectedTimeInstants);
 
@@ -93,46 +93,110 @@ disp(actual_UE_position);
 disp('Localization Error (meters):');
 disp(localization_error);
 
-% Visualization
+
+%% 3D Visualization of Hyperboloids with Projections
 figure;
 hold on;
-title('TDOA Localization with Hyperboloids');
+title('TDOA Localization: 3D Hyperboloids and 2D Projections');
 xlabel('X (meters)');
 ylabel('Y (meters)');
 zlabel('Z (meters)');
 grid on;
 axis equal;
 
-% Number of grid points for visualization
+% Number of grid points for the 3D space
 n_points = 100;
-[x_range, y_range] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
+[x_range, y_range, z_range] = meshgrid(linspace(0, 7e6, n_points), ...
+                                       linspace(0, 7e6, n_points), ...
+                                       linspace(0, 7e6, n_points));
 
 % Plot hyperboloids for each TDOA
 for k = 1:size(pairs, 1)
     sat1 = satPosxyz(pairs(k, 1), :);  % First satellite in the pair
     sat2 = satPosxyz(pairs(k, 2), :);  % Second satellite in the pair
 
-    % Calculate hyperboloids
-    z_range = linspace(-7e6, 7e6, 5);  % Z-slices for visualization
-    for z = z_range
-        d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z - sat1(3)).^2);
-        d2 = sqrt((x_range - sat2(1)).^2 + (y_range - sat2(2)).^2 + (z - sat2(3)).^2);
-        hyperboloid = abs(d1 - d2) - radii_differences(k);
-        contour3(x_range, y_range, hyperboloid, [0, 0], 'LineWidth', 1);
-    end
+    % Calculate distances for each point in 3D space
+    d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z_range - sat1(3)).^2);
+    d2 = sqrt((x_range - sat2(1)).^2 + (y_range - sat2(2)).^2 + (z_range - sat2(3)).^2);
+
+    % Compute the hyperboloid for the current TDOA
+    hyperboloid = abs(d1 - d2) - radii_differences(k);
+
+    % Visualize the hyperboloid as an isosurface
+    iso_val = 0;  % The zero level of the hyperboloid equation
+    p = patch(isosurface(x_range, y_range, z_range, hyperboloid, iso_val));
+    set(p, 'FaceColor', rand(1, 3), 'EdgeColor', 'none', 'FaceAlpha', 0.3);  % Random color
+
 end
 
-% Plot satellite positions
+% Add satellite positions
 scatter3(satPosxyz(:, 1), satPosxyz(:, 2), satPosxyz(:, 3), 100, 'r', 'filled');
 text(satPosxyz(:, 1), satPosxyz(:, 2), satPosxyz(:, 3), ...
     compose('Sat %d', 1:size(satPosxyz, 1)), 'VerticalAlignment', 'bottom');
 
-% Plot estimated UE position
-scatter3(estimated_UE_position(1), estimated_UE_position(2), estimated_UE_position(3), 200, 'x', 'MarkerEdgeColor', 'b', 'LineWidth', 2);
-text(estimated_UE_position(1), estimated_UE_position(2), estimated_UE_position(3), 'Estimated', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
+% Add estimated UE position
+scatter3(estimated_UE_position(1), estimated_UE_position(2), estimated_UE_position(3), ...
+    200, 'x', 'MarkerEdgeColor', 'b', 'LineWidth', 2);
+text(estimated_UE_position(1), estimated_UE_position(2), estimated_UE_position(3), ...
+    'Estimated UE', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
 
-% Plot actual UE position
-scatter3(actual_UE_position(1), actual_UE_position(2), actual_UE_position(3), 200, 'o', 'MarkerEdgeColor', 'g', 'LineWidth', 2);
-text(actual_UE_position(1), actual_UE_position(2), actual_UE_position(3), 'Actual', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
+% Add actual UE position
+scatter3(actual_UE_position(1), actual_UE_position(2), actual_UE_position(3), ...
+    200, 'o', 'MarkerEdgeColor', 'g', 'LineWidth', 2);
+text(actual_UE_position(1), actual_UE_position(2), actual_UE_position(3), ...
+    'Actual UE', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
+
+% Add lighting and view adjustments
+camlight;
+lighting gouraud;
+view(3);  % 3D view
 
 hold off;
+
+%% 2D Visualization of TDOA Localization (Hyperbolas)
+figure;
+hold on;
+title('TDOA Localization with 2D Hyperbolas');
+xlabel('X (meters)');
+ylabel('Y (meters)');
+grid on;
+axis equal;
+
+% Number of grid points for visualization
+n_points = 1000;
+[x_range, y_range] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
+
+% Assume a constant Z-coordinate (e.g., mean of satellite heights)
+z_constant = mean(satPosxyz(:, 3));
+
+% Plot hyperbolas for each TDOA
+for k = 1:size(pairs, 1)
+    sat1 = satPosxyz(pairs(k, 1), :);  % First satellite in the pair
+    sat2 = satPosxyz(pairs(k, 2), :);  % Second satellite in the pair
+
+    % Calculate distances
+    d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z_constant - sat1(3)).^2);
+    d2 = sqrt((x_range - sat2(1)).^2 + (y_range - sat2(2)).^2 + (z_constant - sat2(3)).^2);
+
+    % Define the hyperbola
+    hyperbola = abs(d1 - d2) - radii_differences(k);
+
+    % Plot the hyperbola (contour where hyperbola = 0)
+    contour(x_range, y_range, hyperbola, [0, 0], 'LineWidth', 1);
+end
+
+% Plot satellite positions in 2D
+scatter(satPosxyz(:, 1), satPosxyz(:, 2), 100, 'r', 'filled');
+text(satPosxyz(:, 1), satPosxyz(:, 2), ...
+    compose('Sat %d', 1:size(satPosxyz, 1)), 'VerticalAlignment', 'bottom');
+
+% Plot estimated UE position in 2D
+scatter(estimated_UE_position(1), estimated_UE_position(2), 200, 'x', 'MarkerEdgeColor', 'b', 'LineWidth', 2);
+text(estimated_UE_position(1), estimated_UE_position(2), 'Estimated', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
+
+% Plot actual UE position in 2D
+scatter(actual_UE_position(1), actual_UE_position(2), 200, 'o', 'MarkerEdgeColor', 'g', 'LineWidth', 2);
+text(actual_UE_position(1), actual_UE_position(2), 'Actual', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
+
+hold off;
+
