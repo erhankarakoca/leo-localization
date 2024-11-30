@@ -96,7 +96,7 @@ $$
 2. **TDOA Computation**: The TDOA values for each pair \( (i, j) \) can be written as:
 
 $$
-f(\mathbf{p}) = \sum_{(i,j)} \left| \left( \frac{1}{c} \left( \| \mathbf{p} - \mathbf{S}_i \| - \| \mathbf{p} - \mathbf{S}_j \| \right) \right) - TDOA_{ij} \right|^2
+\mathbf{TDOA}_{ij} = \frac{1}{c} \left( \mathbf{d}_i(\mathbf{p}) - \mathbf{d}_j(\mathbf{p}) \right)
 $$
 
 3. **Objective Function**: The optimization function in matrix form is:
