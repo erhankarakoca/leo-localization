@@ -68,7 +68,9 @@ where $\( c \)$ is the speed of light.
 
 The objective function for the optimization problem is to minimize the residual between the measured TDOA and the computed TDOA:
 
-$$f(\mathbf{p})=\sum_{(i, j)}\left|\left(\frac{1}{c}\left(\left\|\mathbf{p}-\mathbf{S}_i\right\|-\left\|\mathbf{p}-\mathbf{S}_j\right\|\right)\right)-T D O A_{i j}\right|^2$$
+```math
+f(\mathbf{p})=\sum_{(i, j)}\left|\left(\frac{1}{c}\left(\left\|\mathbf{p}-\mathbf{S}_i\right\|-\left\|\mathbf{p}-\mathbf{S}_j\right\|\right)\right)-T D O A_{i j}\right|^2
+```
 
 or equivalently:
 
