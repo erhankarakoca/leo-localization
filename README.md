@@ -24,9 +24,9 @@ $$
 \mathbf{p} = \begin{bmatrix} p_1 \\ p_2 \\ p_3 \end{bmatrix}
 $$
 
-where $p_1, p_2, p_3$ are the coordinates of the UE in 3D space.
+where \( p_1, p_2, p_3 \) are the coordinates of the UE in 3D space.
 
-Let the positions of the satellites be stored in a matrix $\mathbf{S}$:
+Let the positions of the satellites be stored in a matrix \( \mathbf{S} \):
 
 $$
 \mathbf{S} = \begin{bmatrix} 
@@ -37,9 +37,9 @@ x_N & y_N & z_N
 \end{bmatrix}
 $$
 
-where $\mathbf{S}_i = [x_i, y_i, z_i]^T$ represents the position of the $i$-th satellite.
+where \( \mathbf{S}_i = [x_i, y_i, z_i]^T \) represents the position of the \( i \)-th satellite.
 
-Let the TDOA measurements between the satellite pairs $i$ and $j$ be stored in a vector $\mathbf{TDOA}$:
+Let the TDOA measurements between the satellite pairs \( i \) and \( j \) be stored in a vector \( \mathbf{TDOA} \):
 
 $$
 \mathbf{TDOA} = \begin{bmatrix}
@@ -62,7 +62,7 @@ $$
 TDOA_{ij} = \frac{1}{c} \left( \| \mathbf{p} - \mathbf{S}_i \| - \| \mathbf{p} - \mathbf{S}_j \| \right)
 $$
 
-where $c$ is the speed of light.
+where \( c \) is the speed of light.
 
 ### Objective Function:
 
@@ -78,11 +78,11 @@ $$
 f(\mathbf{p}) = \|\mathbf{r}(\mathbf{p})\|^2
 $$
 
-where $\mathbf{r}(\mathbf{p})$ is the residual vector between the measured and calculated TDOA values.
+where \( \mathbf{r}(\mathbf{p}) \) is the residual vector between the measured and calculated TDOA values.
 
 ### Matrix Formulation:
 
-1. **Distance Vector**: The distances $d_i(\mathbf{p})$ for all satellites can be written as:
+1. **Distance Vector**: The distances \( d_i(\mathbf{p}) \) for all satellites can be written as:
 
 $$
 \mathbf{d}(\mathbf{p}) = \begin{bmatrix}
@@ -93,7 +93,7 @@ $$
 \end{bmatrix}
 $$
 
-2. **TDOA Computation**: The TDOA values for each pair $(i, j)$ can be written as:
+2. **TDOA Computation**: The TDOA values for each pair \( (i, j) \) can be written as:
 
 $$
 \mathbf{TDOA}_{ij} = \frac{1}{c} \left( \mathbf{d}_i(\mathbf{p}) - \mathbf{d}_j(\mathbf{p}) \right)
@@ -105,7 +105,7 @@ $$
 f(\mathbf{p}) = \|\mathbf{r}(\mathbf{p})\|^2
 $$
 
-where the vector $\mathbf{r}(\mathbf{p})$ is the residual between the measured and computed TDOA values.
+where the vector \( \mathbf{r}(\mathbf{p}) \) is the residual between the measured and computed TDOA values.
 
 ### Solving the Optimization Problem:
 
