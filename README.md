@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project implements a Time Difference of Arrival (TDOA) based localization algorithm to estimate the position of a User Equipment (UE) using a constellation of Low Earth Orbit (LEO) satellites. The position of the UE is estimated based on TDOA measurements between satellite pairs. The problem is formulated as an optimization problem, which is solved using nonlinear least squares optimization techniques to minimize the residuals between the measured and computed TDOA values.
+This project implements a Time Difference of Arrival (TDOA) based localization algorithm to estimate the position of a User Equipment (UE) using a constellation of Low Earth Orbit (LEO) satellites. The position of the UE is estimated based on TDOA measurements between single LEO satellite pairs at different times. The problem is formulated as an optimization problem, which is solved using nonlinear least squares optimization techniques to minimize the residuals between the measured and computed TDOA values.
 
 ### Key Components:
 
