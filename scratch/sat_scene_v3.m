@@ -46,7 +46,7 @@ end
 c = physconst("LightSpeed");
 toaSatToUe = distanceSatToUe / c ;
 
-selectedTimeInstants = [1,5,9,14];
+selectedTimeInstants = [1,3,6,9,12,15];
 
 TOAs = toaSatToUe(selectedTimeInstants);
 
@@ -167,7 +167,7 @@ n_points = 1000;
 [x_range, y_range] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
 
 % Assume a constant Z-coordinate (e.g., mean of satellite heights)
-z_constant = mean(satPosxyz(:, 3));
+z_constant = ueStationECEF(3);
 
 % Plot hyperbolas for each TDOA
 for k = 1:size(pairs, 1)
