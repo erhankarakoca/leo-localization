@@ -69,21 +69,39 @@ actual_UE_position = ueStationECEF;  % Replace this variable with the actual UE 
 % Compute radii differences for TDOAs
 radii_differences = TDOAs * c;  % Convert TDOAs to distances
 
+
+% Initial guess for UE position
+initial_guess = mean(satPosxyz, 1);
+
+%% LSQNONLIN
 % Objective function for localization
 objective_func = @(p) arrayfun(@(k) ...
     abs(sqrt((p(1) - satPosxyz(pairs(k, 1), 1))^2 + (p(2) - satPosxyz(pairs(k, 1), 2))^2 + (p(3) - satPosxyz(pairs(k, 1), 3))^2) - ...
         sqrt((p(1) - satPosxyz(pairs(k, 2), 1))^2 + (p(2) - satPosxyz(pairs(k, 2), 2))^2 + (p(3) - satPosxyz(pairs(k, 2), 3))^2) - ...
         radii_differences(k)), 1:size(pairs, 1));
-
-% Initial guess for UE position
-initial_guess = mean(satPosxyz, 1);
-
 % Solve for UE position using optimization
 options = optimoptions('lsqnonlin', 'Display', 'iter');
 estimated_UE_position = lsqnonlin(objective_func, initial_guess, [], [], options);
 
+%% QUASI NEWTON
+% Objective function for localization
+objective_func = @(p) sum((arrayfun(@(k) ...
+    abs(sqrt((p(1) - satPosxyz(pairs(k, 1), 1))^2 + (p(2) - satPosxyz(pairs(k, 1), 2))^2 + (p(3) - satPosxyz(pairs(k, 1), 3))^2) - ...
+        sqrt((p(1) - satPosxyz(pairs(k, 2), 1))^2 + (p(2) - satPosxyz(pairs(k, 2), 2))^2 + (p(3) - satPosxyz(pairs(k, 2), 3))^2) - ...
+        radii_differences(k)), 1:size(pairs, 1))) );
+
+
+% Set options for fminunc
+options = optimoptions('fminunc', 'Algorithm', 'quasi-newton', 'Display', 'iter');
+
+% Solve for UE position using fminunc
+[estimated_UE_position, fval] = fminunc(objective_func, initial_guess, options);
+
+%%
+
 % Calculate error
 localization_error = norm(estimated_UE_position - actual_UE_position);
+
 
 % Display results
 disp('Estimated UE Position:');

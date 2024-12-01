@@ -57,8 +57,8 @@ pairs = nchoosek(1:length(TOAs), 2);
 TDOAs = arrayfun(@(row) TOAs(pairs(row, 1)) - TOAs(pairs(row, 2)), 1:size(pairs, 1));
 
 % Add Gaussian noise to TDOA measurements (simulate clock error)
-std_dev = 1e-9;  % Standard deviation of the Gaussian noise (in seconds)
-TDOA_noise = std_dev * randn(size(TDOAs));  % Gaussian noise
+sigma = 1e-6;  % Standard deviation of the Gaussian noise (in seconds)
+TDOA_noise = sigma * randn(size(TDOAs));  % Gaussian noise
 TDOAs_with_noise = TDOAs + TDOA_noise;  % Add noise to TDOA
 
 % Display results
@@ -185,7 +185,7 @@ for k = 1:size(pairs, 1)
     hyperbola = abs(d1 - d2) - radii_differences(k);
 
     % Visualize the hyperbola as a contour plot
-    contour(x_range, y_range, hyperbola, [0 0], 'ShowText', 'on');
+    contour(x_range, y_range, hyperbola, [0, 0]);
 end
 
 % Add satellite positions
