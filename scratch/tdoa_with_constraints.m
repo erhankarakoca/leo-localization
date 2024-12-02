@@ -46,7 +46,7 @@ end
 c = physconst("LightSpeed");
 toaSatToUe = distanceSatToUe / c ;
 
-selectedTimeInstants = [1,3,6,9,12,15];
+selectedTimeInstants = [1,4,13,15];
 
 TOAs = toaSatToUe(selectedTimeInstants);
 
@@ -71,8 +71,8 @@ radii_differences = TDOAs * c;  % Convert TDOAs to distances
 
 
 % Initial guess for UE position
-initial_guess = mean(satPosxyz, 1);
-% initial_guess = lla2ecef([39.284593, 33.421097, 887]);
+% initial_guess = mean(satPosxyz, 1);
+initial_guess = lla2ecef([39.284593, 33.421097, 887]);
 % initial_guess = [0,0,0];
 %% Objective Functions
 % Objective function for localization
@@ -82,7 +82,7 @@ initial_guess = mean(satPosxyz, 1);
 %         radii_differences(k)), 1:size(pairs, 1));
 
 % % Objective function for localization
-objective_func = @(p) sum((arrayfun(@(k) ...
+objective_func = @(p) ((arrayfun(@(k) ...
     abs(sqrt((p(1) - satPosxyz(pairs(k, 1), 1))^2 + ...
              (p(2) - satPosxyz(pairs(k, 1), 2))^2 + ...
              (p(3) - satPosxyz(pairs(k, 1), 3))^2) - ...
@@ -154,7 +154,7 @@ for k = 1:size(pairs, 1)
     iso_val = 0;  % The zero level of the hyperboloid equation
     p = patch(isosurface(x_range, y_range, z_range, hyperboloid, iso_val));
     set(p, 'FaceColor', rand(1, 3), 'EdgeColor', 'none', 'FaceAlpha', 0.3);  % Random color
-
+    
 end
 
 % Add satellite positions
