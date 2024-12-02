@@ -27,7 +27,7 @@ ac = access(constellation,gsUE);
 intvls = accessIntervals(ac);
 
 %% Play the sat scene defined on tle with ue 
-% play(satscene);
+play(satscene);
 
 %% Any satellite can be selected from the viewer 
 % Be just sure it it can access to the groun station (ue)

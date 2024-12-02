@@ -72,6 +72,7 @@ radii_differences = TDOAs * c;  % Convert TDOAs to distances
 
 % Initial guess for UE position
 initial_guess = mean(satPosxyz, 1);
+% initial_guess = lla2ecef([39.284593, 33.421097, 887]);
 % initial_guess = [0,0,0];
 %% Objective Functions
 % Objective function for localization
