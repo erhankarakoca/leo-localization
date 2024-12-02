@@ -58,12 +58,14 @@ end
 c = physconst("LightSpeed");
 toaSatToUe = distanceSatToUe / c ;
 
-TDOAs = [toaSatToUe(1)-toaSatToUe(5),       % 1 2
-         toaSatToUe(1)-toaSatToUe(10),      % 1 3 
-         toaSatToUe(1)-toaSatToUe(15),      % 1 4
-         toaSatToUe(5)-toaSatToUe(10),      % 2 3
-         toaSatToUe(5)-toaSatToUe(15),      % 2 4
-         toaSatToUe(10)-toaSatToUe(15)];     % 3 4 
+TOAs = [toaSatToUe(1),toaSatToUe(5),toaSatToUe(10),toaSatToUe(15)];
+
+TDOAs = [TOAs(1)-TOAs(2),      % 1 2
+         TOAs(1)-TOAs(3),      % 1 3 
+         TOAs(1)-TOAs(4),      % 1 4
+         TOAs(2)-TOAs(3),      % 2 3
+         TOAs(2)-TOAs(4),      % 2 4
+         TOAs(3)-TOAs(4)];     % 3 4 
              
 
 satPosxyz=satPos(:,[1,5,10,15])';
@@ -105,9 +107,15 @@ for k = 1:6  % Visualize all six TDOA measurements (1-2, 1-3, 1-4, 2-3, 2-4, 3-4
     % Hyperboloid equation: |d1 - d2| = delta_d
     hyperboloid_eq = abs(d1 - d2) - delta_d;
 
+
     % Plot the hyperboloid using contour3 for the current Z-slice
     contour3(x_range, y_range, hyperboloid_eq, [0, 0], 'LineWidth', 2);
   
+
+    % Plot the hyperboloid using surf, contour, or other visualization method
+    surf(x_range, y_range, hyperboloid_eq, 'EdgeColor', 'none', 'FaceAlpha', 1); % Plot the surface directly
+        
+
 end
 
 % Plot satellite positions in 3D space
