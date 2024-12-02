@@ -78,7 +78,7 @@ zlabel('Z (meters)');
 grid on;
 
 % Plot each hyperboloid
-n_points = 1000; % Number of grid points for mesh
+n_points = 500; % Number of grid points for mesh
 [X, Y] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
 
 index = [1,2 ; 1,3 ; 1,4; 2,3; 2,4; 3,4];
@@ -90,8 +90,8 @@ for k = 1:6 % Visualize first three TDOAs
     delta_d = TDOAs(k) * c; % Convert TDOA back to distance
     
     % Hyperboloid equation
-    Z = sqrt((sqrt((X - sat1(1)).^2 + (Y - sat1(2)).^2) - ...
-              sqrt((X - sat2(1)).^2 + (Y - sat2(2)).^2) - delta_d).^2);
+    Z = sqrt((sqrt((X - sat1(1)).^2 + (Y - sat1(2)).^2 ) - ...
+              sqrt((X - sat2(1)).^2 + (Y - sat2(2)).^2 ) - delta_d).^2);
     
     % Plot the hyperboloid
     surf(X, Y, Z, 'EdgeColor', 'none', 'FaceAlpha', 0.5);
