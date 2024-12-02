@@ -72,7 +72,7 @@ radii_differences = TDOAs * c;  % Convert TDOAs to distances
 
 % Initial guess for UE position
 initial_guess = mean(satPosxyz, 1);
-
+% initial_guess = [0,0,0];
 %% Objective Functions
 % Objective function for localization
 % objective_func = @(p) arrayfun(@(k) ...
@@ -82,29 +82,36 @@ initial_guess = mean(satPosxyz, 1);
 
 % % Objective function for localization
 objective_func = @(p) sum((arrayfun(@(k) ...
-    abs(sqrt((p(1) - satPosxyz(pairs(k, 1), 1))^2 + (p(2) - satPosxyz(pairs(k, 1), 2))^2 + (p(3) - satPosxyz(pairs(k, 1), 3))^2) - ...
-        sqrt((p(1) - satPosxyz(pairs(k, 2), 1))^2 + (p(2) - satPosxyz(pairs(k, 2), 2))^2 + (p(3) - satPosxyz(pairs(k, 2), 3))^2) - ...
-        radii_differences(k)), 1:size(pairs, 1))));
+    abs(sqrt((p(1) - satPosxyz(pairs(k, 1), 1))^2 + ...
+             (p(2) - satPosxyz(pairs(k, 1), 2))^2 + ...
+             (p(3) - satPosxyz(pairs(k, 1), 3))^2) - ...
+        sqrt((p(1) - satPosxyz(pairs(k, 2), 1))^2 + ...
+             (p(2) - satPosxyz(pairs(k, 2), 2))^2 + ...
+             (p(3) - satPosxyz(pairs(k, 2), 3))^2) - ...
+              radii_differences(k)), 1:size(pairs, 1))));
 
-%% LSQNONLIN
-% Solve for UE position using optimization
-options = optimoptions('lsqnonlin', 'Display', 'iter', ...
-    'FunctionTolerance', 1e-10, ...
-    'FiniteDifferenceStepSize',1e-10);
-estimated_UE_position = lsqnonlin(objective_func, initial_guess, [], [], options);
- 
-%% QUASI NEWTON
-% % Set options for fminunc
-% options = optimoptions('fminunc', 'Algorithm', 'quasi-newton', 'Display', 'iter');
-% 
-% % Solve for UE position using fminunc
-% [estimated_UE_position, fval] = fminunc(objective_func, initial_guess, options);
+% Define bounds for ECEF coordinates (in meters)
+earth_radius = 6.371e6; % Approximate Earth radius in meters
+alt_min = 0; % Minimum altitude (e.g., Dead Sea, below sea level)
+alt_max = 1e3; % Maximum altitude (e.g., low Earth orbit)
 
-%%
+% Calculate bounds for ECEF coordinates
+lower_bound = [(earth_radius + alt_min) * -1, ...
+               (earth_radius + alt_min) * -1, ...
+               (earth_radius + alt_min) * -1];
+
+
+upper_bound = [(earth_radius + alt_max), ...
+               (earth_radius + alt_max), ...
+               (earth_radius + alt_max)];
+options = optimoptions('lsqnonlin', 'Display', 'iter');
+% Solve for UE position using lsqnonlin with bounds
+estimated_UE_position = lsqnonlin(objective_func, initial_guess, lower_bound, upper_bound, options);
+
+
 
 % Calculate error
 localization_error = norm(estimated_UE_position - actual_UE_position);
-
 
 % Display results
 disp('Estimated UE Position:');
@@ -113,7 +120,6 @@ disp('Actual UE Position:');
 disp(actual_UE_position);
 disp('Localization Error (meters):');
 disp(localization_error);
-
 
 %% 3D Visualization of Hyperboloids with Projections
 figure;
