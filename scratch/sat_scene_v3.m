@@ -125,9 +125,9 @@ axis equal;
 
 % Number of grid points for the 3D space
 n_points = 100;
-[x_range, y_range, z_range] = meshgrid(linspace(0, 7e6, n_points), ...
-                                       linspace(0, 7e6, n_points), ...
-                                       linspace(0, 7e6, n_points));
+[x_range, y_range, z_range] = meshgrid(linspace(0, 12e6, n_points), ...
+                                       linspace(0, 12e6, n_points), ...
+                                       linspace(0, 12e6, n_points));
 
 % Plot hyperboloids for each TDOA
 for k = 1:size(pairs, 1)
@@ -183,7 +183,7 @@ axis equal;
 
 % Number of grid points for visualization
 n_points = 1000;
-[x_range, y_range] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
+[x_range, y_range] = meshgrid(linspace(0e6, 12e6, n_points), linspace(0e6, 7e6, n_points));
 
 % Assume a constant Z-coordinate (e.g., mean of satellite heights)
 z_constant = ueStationECEF(3);

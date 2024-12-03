@@ -80,40 +80,42 @@ zlabel('Z (meters)');
 grid on;
 
 % Number of grid points for mesh
-n_points = 500;  % Adjust grid resolution for better performance
+n_points = 100;  % Adjust grid resolution for better performance
 
 % Create meshgrid for X, Y coordinates (Z is fixed for slices)
-[x_range, y_range] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
+[x_range, y_range, z_range] = meshgrid(linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points), linspace(-7e6, 7e6, n_points));
 
 % Set Z values for slices (you can modify this to get a range of slices)
 z_slices = linspace(-7e6, 7e6, 10);  % Define multiple Z-slices to visualize hyperboloids
 
-% Speed of light constant
-c = physconst("LightSpeed");
-index = [1,2 ; 1,3 ; 1,4; 2,3; 2,4; 3,4];
+% Define the index of the satellite pairs for TDOA visualization
+index = [1,2; 1,3; 1,4; 2,3; 2,4; 3,4];  % Index for pairs (1-2, 1-3, 1-4, etc.)
+
 for k = 1:6  % Visualize all six TDOA measurements (1-2, 1-3, 1-4, 2-3, 2-4, 3-4)
     % Select the two satellites for the current pair
-    
     sat1 = satPosxyz(index(k,1), :);  % First satellite in the pair
     sat2 = satPosxyz(index(k,2), :);  % Second satellite in the pair
     
     % Distance difference for this TDOA
     delta_d = TDOAs(k) * c;  % Convert TDOA back to distance
 
-    for z = z_slices  % Loop through Z slices
-        % Calculate the Euclidean distances from all points in the grid to the two satellites
-        d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z - sat1(3)).^2);
-        d2 = sqrt((x_range - sat2(1)).^2 + (y_range - sat2(2)).^2 + (z - sat2(3)).^2);
-        
-        % Hyperboloid equation: |d1 - d2| = delta_d
-        hyperboloid_eq = abs(d1 - d2) - delta_d;
+   
+    % Calculate the Euclidean distances from all points in the grid to the two satellites
+    d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z_range - sat1(3)).^2);
+    d2 = sqrt((x_range - sat2(1)).^2 + (y_range - sat2(2)).^2 + (z_range - sat2(3)).^2);
+    
+    % Hyperboloid equation: |d1 - d2| = delta_d
+    hyperboloid_eq = abs(d1 - d2) - delta_d;
 
-        % Plot the hyperboloid using surf, contour, or other visualization method
-        surf(x_range, y_range, hyperboloid_eq, 'EdgeColor', 'none', 'FaceAlpha', 1); % Plot the surface directly
+
+    % Plot the hyperboloid using contour3 for the current Z-slice
+    contour3(x_range, y_range, hyperboloid_eq, [0, 0], 'LineWidth', 2);
+  
+
+    % Plot the hyperboloid using surf, contour, or other visualization method
+    surf(x_range, y_range, hyperboloid_eq, 'EdgeColor', 'none', 'FaceAlpha', 1); % Plot the surface directly
         
-        % Optionally, you can adjust the range and appearance here
-        % (e.g., use 'EdgeColor' and 'FaceAlpha' for more control over appearance)
-    end
+
 end
 
 % Plot satellite positions in 3D space
