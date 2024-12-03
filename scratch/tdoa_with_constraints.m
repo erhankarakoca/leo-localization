@@ -3,7 +3,7 @@ close all;
 clc;
 %% Create a satellite scenario
 startTime = datetime(2020, 05, 04, 18,45,50);
-stopTime = datetime(2020, 05, 04, 19,02,20);
+stopTime = datetime(2020, 05, 04, 20,02,20);
 sampleTime=10;
 satscene = satelliteScenario(startTime,stopTime,sampleTime);
 
@@ -36,7 +36,7 @@ referenceSatellite = "Satellite "+ string(satNumber) ;
 rows = matches(intvls.Source, referenceSatellite);
 
 tleStruct = tleread('leoSatelliteConstellation.tle');
-for i = 1:15
+for i = 1:30
     orbitTime = startTime+minutes(i);
     [satPos(:,i),satVelocity(:,i)] = propagateOrbit(orbitTime, ...
                                     tleStruct(satNumber), ...
@@ -123,20 +123,27 @@ disp('Localization Error (meters):');
 disp(localization_error);
 
 %% 3D Visualization of Hyperboloids with Projections
+% Colormap Selection
+cmap = lines(size(pairs, 1)); % Generate a set of distinct colors based on 'lines' colormap.
+
 figure;
 hold on;
-title('TDOA Localization: 3D Hyperboloids and 2D Projections');
+title('TDOA Localization: 3D Hyperboloids');
 xlabel('X (meters)');
 ylabel('Y (meters)');
 zlabel('Z (meters)');
 grid on;
 axis equal;
 
+
 % Number of grid points for the 3D space
 n_points = 100;
-[x_range, y_range, z_range] = meshgrid(linspace(0, 12e6, n_points), ...
-                                       linspace(0, 12e6, n_points), ...
-                                       linspace(0, 12e6, n_points));
+[x_range, y_range, z_range] = meshgrid(linspace(-12e6, 12e6, n_points), ...
+                                       linspace(-12e6, 12e6, n_points), ...
+                                       linspace(-12e6, 12e6, n_points));
+
+% Legend entries for TDOA_ij pairs
+legend_entries_3D = cell(size(pairs, 1), 1);
 
 % Plot hyperboloids for each TDOA
 for k = 1:size(pairs, 1)
@@ -152,9 +159,12 @@ for k = 1:size(pairs, 1)
 
     % Visualize the hyperboloid as an isosurface
     iso_val = 0;  % The zero level of the hyperboloid equation
+
     p = patch(isosurface(x_range, y_range, z_range, hyperboloid, iso_val));
-    set(p, 'FaceColor', rand(1, 3), 'EdgeColor', 'none', 'FaceAlpha', 0.3);  % Random color
-    
+    set(p, 'FaceColor', cmap(k, :), 'EdgeColor', 'none', 'FaceAlpha', 0.3);
+
+    % Add legend entry
+    legend_entries_3D{k} = sprintf('TDOA_{%d,%d}', pairs(k, 1), pairs(k, 2));
 end
 
 % Add satellite positions
@@ -179,6 +189,9 @@ camlight;
 lighting gouraud;
 view(3);  % 3D view
 
+% Add legend
+legend(legend_entries_3D, 'Location', 'bestoutside');
+
 hold off;
 
 %% 2D Visualization of TDOA Localization (Hyperbolas)
@@ -190,12 +203,16 @@ ylabel('Y (meters)');
 grid on;
 axis equal;
 
+
 % Number of grid points for visualization
 n_points = 1000;
-[x_range, y_range] = meshgrid(linspace(0e6, 12e6, n_points), linspace(0e6, 7e6, n_points));
+[x_range, y_range] = meshgrid(linspace(-12e6, 12e6, n_points), linspace(-12e6, 12e6, n_points));
 
 % Assume a constant Z-coordinate (e.g., mean of satellite heights)
 z_constant = ueStationECEF(3);
+
+% Legend entries for TDOA_ij pairs
+legend_entries_2D = cell(size(pairs, 1), 1);
 
 % Plot hyperbolas for each TDOA
 for k = 1:size(pairs, 1)
@@ -210,7 +227,10 @@ for k = 1:size(pairs, 1)
     hyperbola = abs(d1 - d2) - radii_differences(k);
 
     % Plot the hyperbola (contour where hyperbola = 0)
-    contour(x_range, y_range, hyperbola, [0, 0], 'LineWidth', 1);
+    contour(x_range, y_range, hyperbola, [0, 0], 'Color', cmap(k, :), 'LineWidth', 1);
+
+    % Add legend entry
+    legend_entries_2D{k} = sprintf('TDOA_{%d,%d}', pairs(k, 1), pairs(k, 2));
 end
 
 % Plot satellite positions in 2D
@@ -225,6 +245,9 @@ text(estimated_UE_position(1), estimated_UE_position(2), 'Estimated', 'VerticalA
 % Plot actual UE position in 2D
 scatter(actual_UE_position(1), actual_UE_position(2), 200, 'o', 'MarkerEdgeColor', 'g', 'LineWidth', 2);
 text(actual_UE_position(1), actual_UE_position(2), 'Actual', 'VerticalAlignment', 'bottom', 'HorizontalAlignment', 'left');
+
+% Add legend
+legend(legend_entries_2D, 'Location', 'bestoutside');
 
 hold off;
 
