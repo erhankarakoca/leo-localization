@@ -4,7 +4,7 @@ clc;
 %% Create a satellite scenario
 startTime = datetime(2020, 05, 04, 18,45,50);
 stopTime = datetime(2020, 05, 04, 19,02,20);
-sampleTime=10;
+sampleTime = 10;
 satscene = satelliteScenario(startTime,stopTime,sampleTime);
 
 % Add satellites from TLE file.
@@ -26,44 +26,124 @@ gsUE = groundStation(satscene, ...
 ac = access(constellation,gsUE);
 intvls = accessIntervals(ac);
 
+%% Extract accessed satellites for specific date-time
+% Generate a random date-time within the startTime and stopTime
+totalSamples = seconds(stopTime - startTime) / sampleTime;
+
+%% Generate a random sample index (integer between 0 and totalSamples - 1)
+randomSampleIndex = randi([0, totalSamples - 1]);
+
+%% Calculate random date-time based on sampleTime
+randomDateTime = startTime + seconds(randomSampleIndex * sampleTime);
+randomDateTime = datetime(randomDateTime, 'TimeZone', 'UTC');
+%% Initialize an array to hold accessed satellites
+accessedSatellites = [];
+
+% Loop through the intervals to check if the random date-time is within any access interval
+for i = 1:height(intvls)
+    % Extract start and end time from the table
+    accessStartTime = intvls{i, 4}; % 4th column: Access start date-time
+    accessEndTime = intvls{i, 5};   % 5th column: Access end date-time
+    
+    % Check if the random date-time is within the access interval
+    if randomDateTime >= accessStartTime && randomDateTime <= accessEndTime
+        % If true, append the satellite name (1st column) to the array
+        accessedSatellites = [accessedSatellites; intvls{i, 1}];
+    end
+end
+
+%% Display the results
+if isempty(accessedSatellites)
+    disp('No satellites accessed at the random date-time.');
+else
+    fprintf('Random Date-Time: %s\n', datestr(randomDateTime));
+    disp('Satellites accessed at this time:');
+    disp(accessedSatellites);
+end
 %% Play the sat scene defined on tle with ue 
-play(satscene);
+% play(satscene);
 
 %% Any satellite can be selected from the viewer 
 % Be just sure it it can access to the groun station (ue)
-satNumber = 19;
-referenceSatellite = "Satellite "+ string(satNumber) ;
-rows = matches(intvls.Source, referenceSatellite);
+
 
 tleStruct = tleread('leoSatelliteConstellation.tle');
-for i = 1:15
-    orbitTime = startTime+minutes(i);
-    [satPos(:,i), satVelocity(:,i)] = propagateOrbit(orbitTime, ...
-                                    tleStruct(satNumber), ...
-                                    "OutputCoordinateFrame","fixed-frame");
-    [~,~, distanceSatToUe(i)] = aer(gsUE, constellation(satNumber), orbitTime);
-end
+% rows = matches(tleStruct.Name, accessedSatellites);
+
+% Extract satellite names from tleStruct
+satelliteNamesInTLE = {tleStruct.Name}';
+% Find indices in tleStruct corresponding to accessedSatellites
+indicesInTLE = find(matches(string(satelliteNamesInTLE), accessedSatellites));
+
+orbitTime = randomDateTime;
+
+% Access the corresponding TLE data for the accessed satellites
+accessedTLEStruct = tleStruct(indicesInTLE);
+
+% Extract orbit propagation and calculate parameters
+[accessedSatPositions, accessedSatVelocities] = propagateOrbit(orbitTime, ...
+                                                               accessedTLEStruct, ...
+                                                               "OutputCoordinateFrame", "fixed-frame");
+
+% Compute distances to UE for all accessed satellites
+[accessedSatAzimuths, accessedSatElevations, accessedSatDistances] = aer(gsUE, ...
+                                                                         constellation(indicesInTLE), ...
+                                                                         orbitTime);
+
+accessedSatPositions = squeeze(accessedSatPositions);
+accessedSatPositions = accessedSatPositions';
+accessedSatVelocities = squeeze(accessedSatVelocities);
+
+accessedSatDistances = squeeze(accessedSatDistances);
+accessedSatAzimuths = squeeze(accessedSatAzimuths);
+accessedSatElevations = squeeze(accessedSatElevations);
+
 c = physconst("LightSpeed");
-toaSatToUe = distanceSatToUe / c ;
+TOAs = accessedSatDistances / c ;
 
-% select specific time instants
-selectedTimeInstants = [1,4,13,15];
+%% Initial guess for UE position
+% initial_guess = mean(satPosxyz, 1);
+initial_guess = lla2ecef([39.284593, 33.421097, 887]);
+% initial_guess = [0,0,0];
+%%
+% Define GDOP threshold (tune as needed)
+gdopThreshold = 5;
 
-%% Timing calculations
-TOAs = toaSatToUe(selectedTimeInstants);
+% Initialize storage for selected subsets
+% selectedCombinations = [];
 
-% Get all combinations of indices for pairs (i, j) where i < j
-pairs = nchoosek(1:length(TOAs), 2);
+% Iterate over all subsets of satellite positions
+numSats = size(accessedSatPositions, 1);
+allCombinations = nchoosek(1:numSats, 4); % For 4 satellites at a time
+
+for i = 1:size(allCombinations, 1)
+    subset = allCombinations(i, :);
+    subsetPositions = accessedSatPositions(subset, :);
+    gdop(i) = calculateGDOP(subsetPositions, initial_guess);
+    % if gdop(i) <= gdopThreshold
+    %     selectedCombinations = [selectedCombinations; subset]; %#ok<AGROW>
+    % end
+end
+
+% Use selected combinations for TDOA calculations
+% disp('Selected satellite combinations based on GDOP:');
+% disp(selectedCombinations);
+
+[~, index] = min(gdop);
+selectedSatIndices = allCombinations(index, :);
+selectedSatPositions = accessedSatPositions(selectedSatIndices, :);
+
+% Compute TOAs for selected satellites
+selectedTOAs = TOAs(selectedSatIndices);
+
+% Recompute pairs for selected satellites
+pairs = nchoosek(1:length(selectedTOAs), 2);
 
 % Calculate TDOA for each pair
-TDOAs = arrayfun(@(row) TOAs(pairs(row, 1)) - TOAs(pairs(row, 2)), 1:size(pairs, 1));
+TDOAs = arrayfun(@(row) selectedTOAs(pairs(row, 1)) - selectedTOAs(pairs(row, 2)), ...
+                 1:size(pairs, 1));
 
-% Display results
-disp('TDOA vector (all combinations):');
-disp(TDOAs);          
-
-satPosxyz=satPos(:,(selectedTimeInstants))';
-
+%%
 % True UE position (replace with actual coordinates)
 actual_UE_position = ueStationECEF;  % Replace this variable with the actual UE position
 
@@ -71,19 +151,15 @@ actual_UE_position = ueStationECEF;  % Replace this variable with the actual UE 
 radii_differences = TDOAs * c;  % Convert TDOAs to distances
 
 
-%% Initial guess for UE position
-% initial_guess = mean(satPosxyz, 1);
-initial_guess = lla2ecef([39.284593, 33.421097, 887]);
-% initial_guess = [0,0,0];
-
 %% Objective Functions
 objective_func = @(p) ((arrayfun(@(k) ...
-    abs(sqrt((p(1) - satPosxyz(pairs(k, 1), 1))^2 + ...
-             (p(2) - satPosxyz(pairs(k, 1), 2))^2 + ...
-             (p(3) - satPosxyz(pairs(k, 1), 3))^2) - ...
-        sqrt((p(1) - satPosxyz(pairs(k, 2), 1))^2 + ...
-             (p(2) - satPosxyz(pairs(k, 2), 2))^2 + ...
-             (p(3) - satPosxyz(pairs(k, 2), 3))^2) - ...
+    abs(sqrt((p(1) - selectedSatPositions(pairs(k, 1), 1))^2 + ...
+             (p(2) - selectedSatPositions(pairs(k, 1), 2))^2 + ...
+             (p(3) - selectedSatPositions(pairs(k, 1), 3))^2) - ...
+        ...
+        sqrt((p(1) - selectedSatPositions(pairs(k, 2), 1))^2 + ...
+             (p(2) - selectedSatPositions(pairs(k, 2), 2))^2 + ...
+             (p(3) - selectedSatPositions(pairs(k, 2), 3))^2) - ...
               radii_differences(k)), 1:size(pairs, 1))));
 
 %% Define bounds for ECEF coordinates (in meters)
@@ -121,7 +197,7 @@ disp(localization_error);
 cmap = lines(size(pairs, 1)); % Generate a set of distinct colors based on 'lines' colormap.
 
 % Colormap for satellites
-sat_cmap = lines(size(satPosxyz, 1)); % Generate a set of distinct colors for satellites
+sat_cmap = lines(size(selectedSatPositions, 1)); % Generate a set of distinct colors for satellites
 
 figure;
 hold on;
@@ -139,12 +215,12 @@ n_points = 100;
                                        linspace(0, 12e6, n_points));
 
 % Legend entries for TDOA_ij pairs
-legend_entries_3D = cell(size(pairs, 1) + size(satPosxyz, 1) + 2, 1);
+legend_entries_3D = cell(size(pairs, 1) + size(selectedSatPositions, 1) + 2, 1);
 
 % Plot hyperboloids for each TDOA
 for k = 1:size(pairs, 1)
-    sat1 = satPosxyz(pairs(k, 1), :);  % First satellite in the pair
-    sat2 = satPosxyz(pairs(k, 2), :);  % Second satellite in the pair
+    sat1 = selectedSatPositions(pairs(k, 1), :);  % First satellite in the pair
+    sat2 = selectedSatPositions(pairs(k, 2), :);  % Second satellite in the pair
 
     % Calculate distances for each point in 3D space
     d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z_range - sat1(3)).^2);
@@ -163,8 +239,8 @@ for k = 1:size(pairs, 1)
 end
 
 % Plot satellite positions
-for i = 1:size(satPosxyz, 1)
-    scatter3(satPosxyz(i, 1), satPosxyz(i, 2), satPosxyz(i, 3), ...
+for i = 1:size(selectedSatPositions, 1)
+    scatter3(selectedSatPositions(i, 1), selectedSatPositions(i, 2), selectedSatPositions(i, 3), ...
         100, sat_cmap(i, :), 'filled');
     legend_entries_3D{size(pairs, 1) + i} = sprintf('Satellite %d', i);
 end
@@ -206,12 +282,12 @@ n_points = 1000;
 z_constant = ueStationECEF(3);
 
 % Legend entries for TDOA_ij pairs
-legend_entries_2D = cell(size(pairs, 1) + size(satPosxyz, 1) + 2, 1);
+legend_entries_2D = cell(size(pairs, 1) + size(selectedSatPositions, 1) + 2, 1);
 
 % Plot hyperbolas for each TDOA
 for k = 1:size(pairs, 1)
-    sat1 = satPosxyz(pairs(k, 1), :);  % First satellite in the pair
-    sat2 = satPosxyz(pairs(k, 2), :);  % Second satellite in the pair
+    sat1 = selectedSatPositions(pairs(k, 1), :);  % First satellite in the pair
+    sat2 = selectedSatPositions(pairs(k, 2), :);  % Second satellite in the pair
 
     % Calculate distances
     d1 = sqrt((x_range - sat1(1)).^2 + (y_range - sat1(2)).^2 + (z_constant - sat1(3)).^2);
@@ -228,8 +304,8 @@ for k = 1:size(pairs, 1)
 end
 
 % Plot satellite positions in 2D
-for i = 1:size(satPosxyz, 1)
-    scatter(satPosxyz(i, 1), satPosxyz(i, 2), 100, sat_cmap(i, :), 'filled');
+for i = 1:size(selectedSatPositions, 1)
+    scatter(selectedSatPositions(i, 1), selectedSatPositions(i, 2), 100, sat_cmap(i, :), 'filled');
     legend_entries_2D{size(pairs, 1) + i} = sprintf('Satellite %d', i);
 end
 
@@ -243,3 +319,19 @@ legend_entries_2D{end} = 'Actual UE Position';
 
 legend(legend_entries_2D, 'Location', 'bestoutside');
 hold off;
+
+
+function gdop = calculateGDOP(satPositions, uePosition)
+    % Compute unit vectors from UE to satellites
+    numSats = size(satPositions, 1);
+    H = zeros(numSats, 4);
+    for i = 1:numSats
+        vec = satPositions(i, :) - uePosition;
+        range = norm(vec);
+        H(i, 1:3) = vec / range;
+        H(i, 4) = 1; % Clock bias component
+    end
+    % GDOP is derived from the trace of (H'*H)^-1
+    Q = inv(H' * H);
+    gdop = sqrt(trace(Q));
+end
