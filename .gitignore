@@ -1,4 +1,6 @@
 ### MATLAB ###
+#MACOS
+*.DS_Store
 # Windows default autosave extension
 *.asv
 
