@@ -103,7 +103,8 @@ TOAs = accessedSatDistances / c ;
 
 %% Initial guess for UE position
 % initial_guess = mean(satPosxyz, 1);
-initial_guess = lla2ecef([39.284593, 33.421097, 887]);
+initial_guess = [lla2ecef([39.284593, 33.421097, 887]), 0];
+% initial_guess = [initial_guess, 0];
 % initial_guess = [0,0,0];
 %%
 % Define GDOP threshold (tune as needed)
@@ -119,7 +120,7 @@ allCombinations = nchoosek(1:numSats, 4); % For 4 satellites at a time
 for i = 1:size(allCombinations, 1)
     subset = allCombinations(i, :);
     subsetPositions = accessedSatPositions(subset, :);
-    gdop(i) = calculateGDOP(subsetPositions, initial_guess);
+    gdop(i) = calculateGDOP(subsetPositions, initial_guess(1:3));
     % if gdop(i) <= gdopThreshold
     %     selectedCombinations = [selectedCombinations; subset]; %#ok<AGROW>
     % end
@@ -137,30 +138,49 @@ selectedSatPositions = accessedSatPositions(selectedSatIndices, :);
 selectedTOAs = TOAs(selectedSatIndices);
 
 % Recompute pairs for selected satellites
-padirs = nchoosek(1:length(selectedTOAs), 2);
+pairs = nchoosek(1:length(selectedTOAs), 2);
 
 % Calculate TDOA for each pair
 TDOAs = arrayfun(@(row) selectedTOAs(pairs(row, 1)) - selectedTOAs(pairs(row, 2)), ...
                  1:size(pairs, 1));
 
+%% Adding TDOA clock error terms
+% Define clock error statistics (in seconds)
+meanClockError = 0; 
+stdClockErrror = 1e-6; 
+
+% Generate random clock error samples
+clockErrors = normrnd(meanClockError, stdClockErrror, size(TDOAs));
+
+TDOAswithError = TDOAs + clockErrors;
 %%
 % True UE position (replace with actual coordinates)
 actual_UE_position = ueStationECEF;  % Replace this variable with the actual UE position
 
 % Compute radii differences for TDOAs
-radii_differences = TDOAs * c;  % Convert TDOAs to distances
+radii_differences = TDOAswithError * c;  % Convert TDOAs to distances
 
 
 %% Objective Functions
-objective_func = @(p) ((arrayfun(@(k) ...
+lambda = 1; % Regularization weight
+regularized_objective_func = @(p) arrayfun(@(k) ...
     abs(sqrt((p(1) - selectedSatPositions(pairs(k, 1), 1))^2 + ...
              (p(2) - selectedSatPositions(pairs(k, 1), 2))^2 + ...
              (p(3) - selectedSatPositions(pairs(k, 1), 3))^2) - ...
-        ...
         sqrt((p(1) - selectedSatPositions(pairs(k, 2), 1))^2 + ...
              (p(2) - selectedSatPositions(pairs(k, 2), 2))^2 + ...
              (p(3) - selectedSatPositions(pairs(k, 2), 3))^2) - ...
-              radii_differences(k)), 1:size(pairs, 1))));
+        radii_differences(k) +  lambda *p(4)*c ) , 1:size(pairs, 1));
+
+objective_func = @(p) arrayfun(@(k) ...
+    abs(sqrt((p(1) - selectedSatPositions(pairs(k, 1), 1))^2 + ...
+             (p(2) - selectedSatPositions(pairs(k, 1), 2))^2 + ...
+             (p(3) - selectedSatPositions(pairs(k, 1), 3))^2) - ...
+        sqrt((p(1) - selectedSatPositions(pairs(k, 2), 1))^2 + ...
+             (p(2) - selectedSatPositions(pairs(k, 2), 2))^2 + ...
+             (p(3) - selectedSatPositions(pairs(k, 2), 3))^2) - ...
+        radii_differences(k)), 1:size(pairs, 1));
+
 
 %% Define bounds for ECEF coordinates (in meters)
 earth_radius = 6.371e6; % Approximate Earth radius in meters
@@ -170,27 +190,35 @@ alt_max = 1e3; % Maximum altitude (e.g., low Earth orbit)
 % Calculate bounds for ECEF coordinates
 lower_bound = [(earth_radius + alt_min) * -1, ...
                (earth_radius + alt_min) * -1, ...
-               (earth_radius + alt_min) * -1];
+               (earth_radius + alt_min) * -1, ...
+               -1e-4];
 
 upper_bound = [(earth_radius + alt_max), ...
                (earth_radius + alt_max), ...
-               (earth_radius + alt_max)];
+               (earth_radius + alt_max), ...
+               1e-4];
 
 %% Set Eq. Solver
 options = optimoptions('lsqnonlin', 'Display', 'iter');
 % Solve for UE position using lsqnonlin with bounds
-estimated_UE_position = lsqnonlin(objective_func, initial_guess, lower_bound, upper_bound, options);
+estimated_UE_position_with_clock_error = lsqnonlin(regularized_objective_func, initial_guess, lower_bound, upper_bound, options);
+estimated_UE_position = lsqnonlin(objective_func, initial_guess(1:3), lower_bound(1:3), upper_bound(1:3), options);
 
 % Calculate error
-localization_error = norm(estimated_UE_position - actual_UE_position);
+localization_error = norm(estimated_UE_position(1:3) - actual_UE_position);
+localization_error_with_clock_error = norm(estimated_UE_position_with_clock_error(1:3) - actual_UE_position);
 
 % Display results
 disp('Estimated UE Position:');
 disp(estimated_UE_position);
+disp('Estimated UE Position with clock error:');
+disp(estimated_UE_position_with_clock_error);
 disp('Actual UE Position:');
 disp(actual_UE_position);
 disp('Localization Error (meters):');
 disp(localization_error);
+disp('Localization Error witch clock error (meters):');
+disp(localization_error_with_clock_error);
 
 %% 3D Visualization of Hyperboloids with Projections
 % Colormap Selection
