@@ -90,6 +90,7 @@ accessedTLEStruct = tleStruct(indicesInTLE);
                                                                          constellation(indicesInTLE), ...
                                                                          orbitTime);
 
+% Tune the data type as desired
 accessedSatPositions = squeeze(accessedSatPositions);
 accessedSatPositions = accessedSatPositions';
 accessedSatVelocities = squeeze(accessedSatVelocities);
