@@ -121,7 +121,7 @@ allCombinations = nchoosek(1:numSats, 4); % For 4 satellites at a time
 for i = 1:size(allCombinations, 1)
     subset = allCombinations(i, :);
     subsetPositions = accessedSatPositions(subset, :);
-    gdop(i) = calculateGDOP(subsetPositions, initialGuess(1:3));
+    [gdop(i), ~] = calculateGDOP(subsetPositions, initialGuess(1:3));
     % if gdop(i) <= gdopThreshold
     %     selectedCombinations = [selectedCombinations; subset]; %#ok<AGROW>
     % end
@@ -207,13 +207,11 @@ altitudeMax = 1e3; % Maximum altitude (e.g., low Earth orbit)
 % Calculate bounds for ECEF coordinates
 lowerBound = [(earthRadius + altitudeMin) * -1, ...
                (earthRadius + altitudeMin) * -1, ...
-               (earthRadius + altitudeMin) * -1, ...
-               -1e-4, -1e-4, -1e-4];
+               (earthRadius + altitudeMin) * -1];
 
 upperBound = [(earthRadius + altitudeMax), ...
                (earthRadius + altitudeMax), ...
-               (earthRadius + altitudeMax), ...
-               1e-4, 1e-4, 1e-4, 1e-4];
+               (earthRadius + altitudeMax)];
 
 %% Set Eq. Solver
 options = optimoptions('lsqnonlin', 'Display', 'iter');
@@ -225,14 +223,14 @@ estUEPosClockErrorVar = lsqnonlin(ObjectiveRegularizedClockErrorVariable, ...
                                                     options);
 estUEPosTDOAError = lsqnonlin(ObjectiveEstimationErrorTDOA, ...
                                     initialGuess(1:3), ...
-                                    lowerBound(1:3), ...
-                                    upperBound(1:3), ...
+                                    lowerBound, ...
+                                    upperBound, ...
                                     options);
 
 estUEPosGroundTruthTDOA = lsqnonlin(ObjectiveGroundTruthTDOA, ...
                                                     initialGuess(1:3), ...
-                                                    lowerBound(1:3), ...
-                                                    upperBound(1:3), ...
+                                                    lowerBound, ...
+                                                    upperBound, ...
                                                     options);
 % Calculate error
 localization_error_with_radii_error = norm(estUEPosTDOAError(1:3) - actualUEPosition);
@@ -431,17 +429,82 @@ grid on;
 view(3);
 hold off;
 
+%% Jacobian computation for better uncertainty estimation 
+
+referenceSat = selectedSatPositions(1, :);
+
+% Initialize Jacobian matrix (TDOA rows x 3 columns for x, y, z)
+G = zeros(4 - 1, 3);
+
+% Compute Jacobian rows for each satellite pair
+for i = 2:4
+    % Position vectors for the current satellite and reference satellite
+    sat_i = selectedSatPositions(i, :);
+    ref_sat = referenceSat;
+
+    % Distance vectors from UE to satellites
+    d_i = norm(sat_i - ueStationECEF); % Distance to satellite i
+    d_ref = norm(ref_sat - ueStationECEF); % Distance to reference satellite
+
+    % Jacobian row for satellite i
+    G(i - 1, :) = (sat_i - ueStationECEF) / d_i - (ref_sat - ueStationECEF) / d_ref;
+end
+
+% Display the Jacobian matrix
+disp('Jacobian matrix (G):');
+disp(G);
+
+% TDOA covariance matrix
+covTDOADist = stdTDOADistError^2 * eye(size(G,1));
+% Compute position covariance matrix
+JacobianMat = inv(G)*covTDOADist*inv(G)'; % Transform TDOA errors to position errors
+% Eigenvalue decomposition of position covariance matrix
+[U, S, ~] = svd(JacobianMat); % U: eigenvectors, S: eigenvalues
+
+% Scale eigenvalues for 95% confidence
+confidence_scale = 2; % 95% confidence interval
+radii = confidence_scale * sqrt(diag(S)); % Radii of uncertainty ellipsoid
+
+% Generate ellipsoid data
+[X, Y, Z] = ellipsoid(0, 0, 0, radii(1), radii(2), radii(3), 50);
+
+% Rotate ellipsoid to align with eigenvectors
+ellipsoid_points = [X(:), Y(:), Z(:)] * U'; % Align with eigenvectors
+X_rot = reshape(ellipsoid_points(:, 1), size(X));
+Y_rot = reshape(ellipsoid_points(:, 2), size(Y));
+Z_rot = reshape(ellipsoid_points(:, 3), size(Z));
+
+
+% Plot uncertainty ellipsoid
+figure;
+surf(X_rot + estUEPosTDOAError(1), Y_rot + estUEPosTDOAError(2), Z_rot + estUEPosTDOAError(3), ...
+    'FaceAlpha', 0.3, 'EdgeColor', 'none');
+hold on;
+
+% Plot estimated and actual positions
+scatter3(estUEPosTDOAError(1), estUEPosTDOAError(2), estUEPosTDOAError(3), ...
+    100, 'r', 'filled', 'DisplayName', 'Estimated Position');
+scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
+    100, 'b', 'filled', 'DisplayName', 'Actual Position');
+
+title('3D Position Uncertainty Region');
+xlabel('X (km)');
+ylabel('Y (km)');
+zlabel('Z (km)');
+legend('show');
+grid on;
+axis equal;
 
 %% Helper Functions
-function gdop = calculateGDOP(satPositions, uePosition)
+function [gdop, Q] = calculateGDOP(satPositions, uePosition)
     % Compute unit vectors from UE to satellites
     numSats = size(satPositions, 1);
-    H = zeros(numSats, 4);
+    H = zeros(numSats, 3);
     for i = 1:numSats
         vec = satPositions(i, :) - uePosition;
         range = norm(vec);
         H(i, 1:3) = vec / range;
-        H(i, 4) = 1; % Clock bias component
+        % H(i, 4) = 1; % Clock bias component
     end
     % GDOP is derived from the trace of (H'*H)^-1
     Q = inv(H' * H);

@@ -139,12 +139,12 @@ AscendedMultipleSatIndices = allCombinations(GDOPAscendedIndexes, : );
 
 NumberofCombinations = 3; 
 
-SelectedAscendedMultipleSatsIndicesMat = AscendedMultipleSatIndices(1:NumberofCombinations,:);
-SelectedAscendedMultipleSatsIndices = reshape(SelectedAscendedMultipleSatsIndicesMat.',1,[]);
-SelectedAscendedMultipleSatPositions = accessedSatPositions(SelectedAscendedMultipleSatsIndices,:);
+SatCombinationsMat = AscendedMultipleSatIndices(1:NumberofCombinations,:);
+SatCombinationsIndices = reshape(SatCombinationsMat.',1,[]);
+SatPositionsCombinationsCombined = accessedSatPositions(SatCombinationsIndices,:);
 
 % Compute TOAs for selected satellites
-selectedTOAs = TOAs(SelectedAscendedMultipleSatsIndices);
+selectedTOAs = TOAs(SatCombinationsIndices);
 
 TDOAs = zeros(6,NumberofCombinations);
 
@@ -190,8 +190,8 @@ for i = 1 : NumberofCombinations
     currentPairs = pairs(:, :, i);
     
     currentTDOAs = arrayfun(@(row) selectedTOAs(currentPairs(row, 1)) - ...
-                                      selectedTOAs(currentPairs(row, 2)), ...
-                            1:size(currentPairs, 1))';
+                                   selectedTOAs(currentPairs(row, 2)), ...
+                                   1:size(currentPairs, 1))';
     
     TDOAs(:,i) = currentTDOAs;
     TDOAswithError(:,i) = currentTDOAs + clockErrors(:,i);
@@ -203,21 +203,21 @@ for i = 1 : NumberofCombinations
 
     %% Objective Functions
     ObjectiveEstimationErrorTDOA = @(p) arrayfun(@(k) ...
-        abs(sqrt((p(1) - SelectedAscendedMultipleSatPositions(currentPairs(k, 1), 1))^2 + ...
-                 (p(2) - SelectedAscendedMultipleSatPositions(currentPairs(k, 1), 2))^2 + ...
-                 (p(3) - SelectedAscendedMultipleSatPositions(currentPairs(k, 1), 3))^2) - ...
-            sqrt((p(1) - SelectedAscendedMultipleSatPositions(currentPairs(k, 2), 1))^2 + ...
-                 (p(2) - SelectedAscendedMultipleSatPositions(currentPairs(k, 2), 2))^2 + ...
-                 (p(3) - SelectedAscendedMultipleSatPositions(currentPairs(k, 2), 3))^2) - ...
+        abs(sqrt((p(1) - SatPositionsCombinationsCombined(currentPairs(k, 1), 1))^2 + ...
+                 (p(2) - SatPositionsCombinationsCombined(currentPairs(k, 1), 2))^2 + ...
+                 (p(3) - SatPositionsCombinationsCombined(currentPairs(k, 1), 3))^2) - ...
+            sqrt((p(1) - SatPositionsCombinationsCombined(currentPairs(k, 2), 1))^2 + ...
+                 (p(2) - SatPositionsCombinationsCombined(currentPairs(k, 2), 2))^2 + ...
+                 (p(3) - SatPositionsCombinationsCombined(currentPairs(k, 2), 3))^2) - ...
             radiiDifferenceswithError(k)), 1:size(currentPairs, 1));
     
     ObjectiveGroundTruthTDOA = @(p) arrayfun(@(k) ...
-        abs(sqrt((p(1) - SelectedAscendedMultipleSatPositions(currentPairs(k, 1), 1))^2 + ...
-                 (p(2) - SelectedAscendedMultipleSatPositions(currentPairs(k, 1), 2))^2 + ...
-                 (p(3) - SelectedAscendedMultipleSatPositions(currentPairs(k, 1), 3))^2) - ...
-            sqrt((p(1) - SelectedAscendedMultipleSatPositions(currentPairs(k, 2), 1))^2 + ...
-                 (p(2) - SelectedAscendedMultipleSatPositions(currentPairs(k, 2), 2))^2 + ...
-                 (p(3) - SelectedAscendedMultipleSatPositions(currentPairs(k, 2), 3))^2) - ...
+        abs(sqrt((p(1) - SatPositionsCombinationsCombined(currentPairs(k, 1), 1))^2 + ...
+                 (p(2) - SatPositionsCombinationsCombined(currentPairs(k, 1), 2))^2 + ...
+                 (p(3) - SatPositionsCombinationsCombined(currentPairs(k, 1), 3))^2) - ...
+            sqrt((p(1) - SatPositionsCombinationsCombined(currentPairs(k, 2), 1))^2 + ...
+                 (p(2) - SatPositionsCombinationsCombined(currentPairs(k, 2), 2))^2 + ...
+                 (p(3) - SatPositionsCombinationsCombined(currentPairs(k, 2), 3))^2) - ...
             radiiDifferenceGroundTruth(k)), 1:size(pairs, 1));
     
     
@@ -382,6 +382,83 @@ grid on;
 view(3);
 hold off;
 
+%%
+
+% Loop through each combination
+% Plot uncertainty ellipsoid
+figure;
+for comb_idx = 1:NumberofCombinations
+    % Get the current satellite combination
+    selected_combination = SatCombinationsMat(comb_idx, :);
+    
+    % Extract the positions of the selected satellites
+    selectedSatPositionsCombination = accessedSatPositions(selected_combination,:);
+    
+    % Reference satellite (use the first satellite in the combination)
+    referenceSat = selectedSatPositionsCombination(1, :);
+    
+    % Initialize Jacobian matrix (TDOA rows x 3 columns for x, y, z)
+    G = zeros(length(selected_combination) - 1, 3);
+    
+    % Compute Jacobian rows for each satellite pair in the current combination
+    for i = 2:length(selected_combination)
+        % Position vectors for the current satellite and reference satellite
+        sat_i = selectedSatPositionsCombination(i, :);
+        ref_sat = referenceSat;
+    
+        % Distance vectors from UE to satellites
+        d_i = norm(sat_i - ueStationECEF); % Distance to satellite i
+        d_ref = norm(ref_sat - ueStationECEF); % Distance to reference satellite
+    
+        % Jacobian row for satellite i
+        G(i - 1, :) = (sat_i - ueStationECEF) / d_i - (ref_sat - ueStationECEF) / d_ref;
+    end
+    
+    % Display the Jacobian matrix for the current combination
+    disp(['Jacobian matrix (G) for combination ', num2str(comb_idx), ':']);
+    disp(G);
+    
+    % TDOA covariance matrix
+    covTDOADist = stdTDOADistError^2 * eye(size(G,1));
+    
+    % Compute position covariance matrix
+    JacobianMat = inv(G) * covTDOADist * inv(G)'; % Transform TDOA errors to position errors
+    
+    % Eigenvalue decomposition of position covariance matrix
+    [U, S, ~] = svd(JacobianMat); % U: eigenvectors, S: eigenvalues
+    
+    % Scale eigenvalues for 95% confidence
+    confidence_scale = 2; % 95% confidence interval
+    radii = confidence_scale * sqrt(diag(S)); % Radii of uncertainty ellipsoid
+    
+    % Generate ellipsoid data
+    [X, Y, Z] = ellipsoid(0, 0, 0, radii(1), radii(2), radii(3), 50);
+    
+    % Rotate ellipsoid to align with eigenvectors
+    ellipsoid_points = [X(:), Y(:), Z(:)] * U'; % Align with eigenvectors
+    X_rot = reshape(ellipsoid_points(:, 1), size(X));
+    Y_rot = reshape(ellipsoid_points(:, 2), size(Y));
+    Z_rot = reshape(ellipsoid_points(:, 3), size(Z));
+    
+    
+    surf(X_rot + ueStationECEF(1), Y_rot + ueStationECEF(2), Z_rot + ueStationECEF(3), ...
+        'FaceAlpha', 0.3, 'EdgeColor', 'none');
+    hold on;
+    
+    % Plot estimated and actual positions
+    scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
+        100, 'r', 'filled', 'DisplayName', 'Estimated Position');
+    scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
+        100, 'b', 'filled', 'DisplayName', 'Actual Position');
+    
+    title(['3D Position Uncertainty Region for Combination ', num2str(comb_idx)]);
+    xlabel('X (km)');
+    ylabel('Y (km)');
+    zlabel('Z (km)');
+    legend('show');
+    grid on;
+    axis equal;
+end
 
 
 %% Helper Functions
