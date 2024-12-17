@@ -137,7 +137,7 @@ end
 [~, GDOPAscendedIndexes]=sort(gdop, "ascend");
 AscendedMultipleSatIndices = allCombinations(GDOPAscendedIndexes, : );
 
-NumberofCombinations = 3; 
+NumberofCombinations = 70; 
 
 SatCombinationsMat = AscendedMultipleSatIndices(1:NumberofCombinations,:);
 SatCombinationsIndices = reshape(SatCombinationsMat.',1,[]);

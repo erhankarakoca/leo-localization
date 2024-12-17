@@ -137,7 +137,7 @@ selectedSatPositions = accessedSatPositions(selectedSatIndices, :);
 selectedTOAs = TOAs(selectedSatIndices);
 
 % Recompute pairs for selected satellites
-padirs = nchoosek(1:length(selectedTOAs), 2);
+pairs = nchoosek(1:length(selectedTOAs), 2);
 
 % Calculate TDOA for each pair
 TDOAs = arrayfun(@(row) selectedTOAs(pairs(row, 1)) - selectedTOAs(pairs(row, 2)), ...
