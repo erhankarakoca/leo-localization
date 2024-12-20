@@ -137,7 +137,7 @@ end
 [~, GDOPAscendedIndexes]=sort(gdop, "ascend");
 AscendedMultipleSatIndices = allCombinations(GDOPAscendedIndexes, : );
 
-NumberofCombinations = 70; 
+NumberofCombinations = 20; 
 
 SatCombinationsMat = AscendedMultipleSatIndices(1:NumberofCombinations,:);
 SatCombinationsIndices = reshape(SatCombinationsMat.',1,[]);
@@ -334,7 +334,7 @@ disp(actualUEPosition);
 stdTDOADistError = stdTDOAError * c;
 
 % Confidence level (95%)
-confidence_scale = 2; % ~2 sigma for 95% confidence
+confidence_scale = 3; % ~2 sigma for 95% confidence
 
 % Generate uncertainty ellipsoids for each combination
 figure;
@@ -355,7 +355,7 @@ for comb = 1:NumberofCombinations
                           confidence_scale * sqrt(cov_matrix(3, 3)), 50);
                       
     % Plot ellipsoid
-    surf(X, Y, Z, 'FaceAlpha', 0.3, 'EdgeColor', 'none', ...
+    surf(X, Y, Z, 'FaceAlpha', 0.1, 'EdgeColor', 'none', ...
          'DisplayName', sprintf('Uncertainty Area (Combination %d)', comb));
 end
 
@@ -407,16 +407,16 @@ for comb_idx = 1:NumberofCombinations
         ref_sat = referenceSat;
     
         % Distance vectors from UE to satellites
-        d_i = norm(sat_i - ueStationECEF); % Distance to satellite i
-        d_ref = norm(ref_sat - ueStationECEF); % Distance to reference satellite
+        d_i = norm(sat_i - estimatedPositionsWithError(comb_idx, :)); % Distance to satellite i
+        d_ref = norm(ref_sat - estimatedPositionsWithError(comb_idx, :)); % Distance to reference satellite
     
         % Jacobian row for satellite i
-        G(i - 1, :) = (sat_i - ueStationECEF) / d_i - (ref_sat - ueStationECEF) / d_ref;
+        G(i - 1, :) = (sat_i - estimatedPositionsWithError(comb_idx, :)) / d_i - (ref_sat - estimatedPositionsWithError(comb_idx, :)) / d_ref;
     end
     
     % Display the Jacobian matrix for the current combination
-    disp(['Jacobian matrix (G) for combination ', num2str(comb_idx), ':']);
-    disp(G);
+    % disp(['Jacobian matrix (G) for combination ', num2str(comb_idx), ':']);
+    % disp(G);
     
     % TDOA covariance matrix
     covTDOADist = stdTDOADistError^2 * eye(size(G,1));
@@ -441,12 +441,12 @@ for comb_idx = 1:NumberofCombinations
     Z_rot = reshape(ellipsoid_points(:, 3), size(Z));
     
     
-    surf(X_rot + ueStationECEF(1), Y_rot + ueStationECEF(2), Z_rot + ueStationECEF(3), ...
-        'FaceAlpha', 0.3, 'EdgeColor', 'none');
+    surf(X_rot + estimatedPositionsWithError(comb_idx, 1), Y_rot + estimatedPositionsWithError(comb_idx, 2), Z_rot + estimatedPositionsWithError(comb_idx, 3), ...
+        'FaceAlpha', 0.1, 'EdgeColor', 'none');
     hold on;
     
     % Plot estimated and actual positions
-    scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
+    scatter3(estimatedPositionsWithError(comb_idx, 1), estimatedPositionsWithError(comb_idx, 2), estimatedPositionsWithError(comb_idx, 3), ...
         100, 'r', 'filled', 'DisplayName', 'Estimated Position');
     scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
         100, 'b', 'filled', 'DisplayName', 'Actual Position');
