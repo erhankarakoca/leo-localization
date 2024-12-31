@@ -330,54 +330,6 @@ stdTDOADistError = stdTDOAError * c;
 % Confidence level (95%)
 confidence_scale = 2; % ~2 sigma for 95% confidence
 
-% Generate uncertainty ellipsoids for each combination
-figure;
-hold on;
-
-for comb = 1:NumberofCombinations
-    % Current estimated position
-    currentEstPos = estimatedPositionsWithError(comb, :);
-    
-    % Define covariance matrix for TDOA-based uncertainty
-    % Assuming isotropic uncertainty for simplicity
-    cov_matrix = stdTDOADistError^2 * eye(3);
-    
-    % Generate ellipsoid centered at the estimated UE position
-    [X, Y, Z] = ellipsoid(currentEstPos(1), currentEstPos(2), currentEstPos(3), ...
-                          confidence_scale * sqrt(cov_matrix(1, 1)), ...
-                          confidence_scale * sqrt(cov_matrix(2, 2)), ...
-                          confidence_scale * sqrt(cov_matrix(3, 3)), 50);
-                      
-    % Plot ellipsoid
-    surf(X, Y, Z, 'FaceAlpha', 0.1, 'EdgeColor', 'none', ...
-         'DisplayName', sprintf('Uncertainty Area (Combination %d)', comb));
-end
-
-% Plot estimated UE positions
-for comb = 1:NumberofCombinations
-    plot3(estimatedPositionsWithError(comb, 1), ...
-          estimatedPositionsWithError(comb, 2), ...
-          estimatedPositionsWithError(comb, 3), ...
-          'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'r', ...
-          'DisplayName', sprintf('Estimated Position (Combination %d)', comb));
-end
-
-% Plot actual UE position
-plot3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
-      'go', 'MarkerSize', 10, 'MarkerFaceColor', 'g', ...
-      'DisplayName', 'Actual Position');
-
-xlabel('X (km)');
-ylabel('Y (km)');
-zlabel('Z (km)');
-title('3D Uncertainty Regions with Estimated and Actual UE Positions');
-% legend show;
-grid on;
-view(3);
-hold off;
-
-%%
-
 % Loop through each combination
 % Plot uncertainty ellipsoid
 figure;
@@ -443,7 +395,7 @@ for comb_idx = 1:NumberofCombinations
     scatter3(estimatedPositionsWithError(comb_idx, 1), estimatedPositionsWithError(comb_idx, 2), estimatedPositionsWithError(comb_idx, 3), ...
         100, 'r', 'filled', 'DisplayName', 'Estimated Position');
     scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
-        100, 'b', 'filled', 'DisplayName', 'Actual Position');
+        100, 'b', 'filled', 'DiayName', 'Actual Position');
     
     title(['3D Position Uncertainty Region for Combination ', num2str(comb_idx)]);
     xlabel('X (km)');
