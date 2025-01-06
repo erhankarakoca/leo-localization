@@ -463,7 +463,7 @@ disp(G);
 % TDOA covariance matrix
 covTDOADist = stdTDOADistError^2 * eye(size(G,1));
 % Compute position covariance matrix
-JacobianMat = inv(G)*covTDOADist*inv(G)'; % Transform TDOA errors to position errors
+JacobianMat = G\covTDOADist/G; % Transform TDOA errors to position errors
 % Eigenvalue decomposition of position covariance matrix
 [U, S, ~] = svd(JacobianMat); % U: eigenvectors, S: eigenvalues
 
