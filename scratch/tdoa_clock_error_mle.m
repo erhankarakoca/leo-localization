@@ -138,8 +138,6 @@ selectedSatPositions = accessedSatPositions(selectedSatIndices, :);
 % Constants
 c = physconst('LightSpeed'); % Speed of light in meters/second
 
-% Satellite positions and TOA computations
-selectedSatPositions = accessedSatPositions(selectedSatIndices, :);
 
 % Compute TOAs for selected satellites
 selectedTOAs = TOAs(selectedSatIndices);
