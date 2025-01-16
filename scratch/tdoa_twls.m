@@ -160,11 +160,28 @@ costFunction = @(xUE) sum(arrayfun(@(k) ...
      norm(xUE - selectedSatPositions(pairs(k, 2), :)) - ...
      radiiDifferenceswithError(k))^2, ...
     1:numPairs));
+%% Non Linear Least Square Solution
+ObjectiveEstimationErrorTDOA = @(p) arrayfun(@(k) ...
+    abs(sqrt((p(1) - selectedSatPositions(pairs(k, 1), 1))^2 + ...
+             (p(2) - selectedSatPositions(pairs(k, 1), 2))^2 + ...
+             (p(3) - selectedSatPositions(pairs(k, 1), 3))^2) - ...
+        sqrt((p(1) - selectedSatPositions(pairs(k, 2), 1))^2 + ...
+             (p(2) - selectedSatPositions(pairs(k, 2), 2))^2 + ...
+             (p(3) - selectedSatPositions(pairs(k, 2), 3))^2) - ...
+        radiiDifferenceswithError(k)), 1:size(pairs, 1));
+
+options = optimoptions('lsqnonlin', 'Display', 'iter');
+
+estUEPosTDOAError = lsqnonlin(ObjectiveEstimationErrorTDOA, ...
+                                    initialGuess(1:3), ...
+                                    lowerBound, ...
+                                    upperBound, ...
+                                    options);
+localizationErrorNLS = norm(estUEPosTDOAError(1:3) - actualUEPosition);
 
 
 %% Solve the Optimization Problem
 % initialGuess = mean(selectedSatPositions, 1); % Use centroid as an initial guess
-initialGuess = [lla2ecef([39.284593, 33.421097, 887])];
 
 options = optimoptions('fmincon', 'Display', 'iter', 'Algorithm', 'sqp');
 
@@ -189,13 +206,12 @@ end
                                     initialGuess, 10000, 1e-9, c);
 
 % Display results
-disp('Estimated UE Position:');
-disp(p_est);
-disp('Residual Norm:');
-disp(residual);
-localizationError = norm(p_est - actualUEPosition);
-    disp('Localization Error (meters):');
-    disp(localizationError);
+disp('NonLin LS Localization Error (meters):');
+disp(localizationErrorNLS);
+
+localizationErrorTWLS = norm(p_est - actualUEPosition);
+    disp('TWLS Localization Error (meters):');
+    disp(localizationErrorTWLS);
 
 %% Helper Functions
 function [gdop, Q] = calculateGDOP(satPositions, uePosition)
