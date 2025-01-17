@@ -161,9 +161,9 @@ clockErrors = normrnd(meanTOAClockError, stdTDOAError, size(TDOAs));
 
 
 %% Define bounds for ECEF coordinates (in meters)
-earthRadius = 6.371e6; % Approximate Earth radius in meters
-altitudeMin = 0; % Minimum altitude (e.g., Dead Sea, below sea level)
-altitudeMax = 1e3; % Maximum altitude (e.g., low Earth orbit)
+earthRadius = 6.371e6; 
+altitudeMin = 0;
+altitudeMax = 1e3;
 
 % Calculate bounds for ECEF coordinates
 lowerBound = [(earthRadius + altitudeMin) * -1, ...
@@ -263,7 +263,7 @@ disp(actualUEPosition);
 stdTDOADistError = stdTDOAError * c;
 
 % Confidence level (95%)
-confidence_scale = 2; % ~2 sigma for 95% confidence
+confidence_scale = 2; 
 
 % Generate uncertainty ellipsoids for each combination
 figure;
@@ -343,22 +343,14 @@ for comb_idx = 1:NumberofCombinations
         G(i - 1, :) = (sat_i - estimatedPositionsWithError(comb_idx, :)) / d_i - (ref_sat - estimatedPositionsWithError(comb_idx, :)) / d_ref;
     end
     
-    % Display the Jacobian matrix for the current combination
-    % disp(['Jacobian matrix (G) for combination ', num2str(comb_idx), ':']);
-    % disp(G);
-    
     % TDOA covariance matrix
     covTDOADist = stdTDOADistError^2 * eye(size(G,1));
-    
-    % Compute position covariance matrix
-    JacobianMat = inv(G) * covTDOADist * inv(G)'; % Transform TDOA errors to position errors
-    
-    % Eigenvalue decomposition of position covariance matrix
-    [U, S, ~] = svd(JacobianMat); % U: eigenvectors, S: eigenvalues
+    JacobianMat = inv(G) * covTDOADist * inv(G)';
+    [U, S, ~] = svd(JacobianMat);
     
     % Scale eigenvalues for 95% confidence
-    confidence_scale = 2; % 95% confidence interval
-    radii = confidence_scale * sqrt(diag(S)); % Radii of uncertainty ellipsoid
+    confidence_scale = 2; 
+    radii = confidence_scale * sqrt(diag(S)); 
     
     % Generate ellipsoid data
     [X, Y, Z] = ellipsoid(0, 0, 0, radii(1), radii(2), radii(3), 50);

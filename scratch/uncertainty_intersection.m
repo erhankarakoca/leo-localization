@@ -331,7 +331,7 @@ for comb_idx = 1:NumberofCombinations
     scatter3(estimatedPositionsWithError(comb_idx, 1), estimatedPositionsWithError(comb_idx, 2), estimatedPositionsWithError(comb_idx, 3), ...
         100, 'r', 'filled', 'DisplayName', 'Estimated Position');
     scatter3(ueStationECEF(1), ueStationECEF(2), ueStationECEF(3), ...
-        100, 'b', 'filled', 'DiayName', 'Actual Position');
+        100, 'b', 'filled', 'DisplayName', 'Actual Position');
     
     title(['3D Position Uncertainty Region for Combination ', num2str(comb_idx)]);
     xlabel('X (km)');
