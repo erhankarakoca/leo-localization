@@ -6,7 +6,7 @@ satscene = satelliteScenario('AutoSimulate', true);
 
 % Add satellites from TLE file.
 tleFile = "starlink.tle";
-constellation = satellite(satscene, "starlink.tle");
+constellation = satellite(satscene, "allLeoSatellites.tle");
 % numSatellites = numel(constellation);
 ueStationLLA = [40.786648, 29.449502, 182];
 ueStationECEF = lla2ecef(ueStationLLA);
