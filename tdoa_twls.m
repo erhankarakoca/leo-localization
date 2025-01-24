@@ -174,14 +174,14 @@ localizationErrorNLS = norm(estUEPosTDOAError(1:3) - actualUEPosition);
 
 %% TWLS
 [p_est, residual] = TWLSoptimizer(selectedSatPositions, TDOAswithError, pairs, covarianceMatrices, ...
-                                    initialGuess, 5, 1e-9, c);
+                                    initialGuess, 10, 1e-9, c);
 
 % Display results
 disp('NonLin LS Localization Error (meters):');
 disp(localizationErrorNLS);
 
 localizationErrorTWLS = norm(p_est - actualUEPosition);
-    disp('TWLS Localization Error (meters):');
-    disp(localizationErrorTWLS);
+disp('TWLS Localization Error (meters):');
+disp(localizationErrorTWLS);
 
 
