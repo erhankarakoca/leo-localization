@@ -21,7 +21,7 @@ gsUE = groundStation(satscene, ...
                      "Longitude", ueStationLLA(2), ...
                      "Altitude",  ueStationLLA(3));
 
-
+rng(42)
 %% Find the access intervals
 ac = access(constellation,gsUE);
 accessIntervals = accessIntervals(ac);
@@ -140,11 +140,11 @@ selectedTOAs = TOAs(selectedSatIndices);
 
 % Recompute pairs for selected satellites
 pairs = nchoosek(1:length(selectedTOAs), 2);
-
+pairs= pairs(1:4,:);
 % Calculate TDOA for each pair
 TDOAs = arrayfun(@(row) selectedTOAs(pairs(row, 1)) - selectedTOAs(pairs(row, 2)), ...
                  1:size(pairs, 1));
-
+%TDOAs= TDOAs(1:4);
 %% Adding TDOA clock error terms
 % Define clock error statistics (in seconds)
 meanTOAClockError = 0; 

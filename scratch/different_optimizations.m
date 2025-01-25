@@ -20,7 +20,7 @@ gsUE = groundStation(satscene, ...
                      "Altitude",  ueStationLLA(3));
 
 c = physconst("LightSpeed");
-rng(42);
+rng(20);
 %% Find the access intervals
 ac = access(constellation,gsUE);
 accessIntervals = accessIntervals(ac);
@@ -118,7 +118,7 @@ TDOAs = arrayfun(@(row) selectedTOAs(pairs(row, 1)) - selectedTOAs(pairs(row, 2)
 
 %% Adding TDOA clock error terms
 meanTOAClockError = 0; 
-stdTOAClockError = 1e-6;
+stdTOAClockError = 1e-9;
 varTOAClockError = stdTOAClockError^2;
 varTOADifferenceClockError = 2 * varTOAClockError;
 stdTDOAError = sqrt(varTOADifferenceClockError);
@@ -155,6 +155,7 @@ for k = 1:numPairs
 end
 
 %% Non Linear Least Square Solution
+% (Your original code remains unchanged)
 ObjectiveEstimationErrorTDOA = @(p) arrayfun(@(k) ...
     abs(sqrt((p(1) - selectedSatPositions(pairs(k, 1), 1))^2 + ...
              (p(2) - selectedSatPositions(pairs(k, 1), 2))^2 + ...
@@ -164,25 +165,65 @@ ObjectiveEstimationErrorTDOA = @(p) arrayfun(@(k) ...
              (p(3) - selectedSatPositions(pairs(k, 2), 3))^2) - ...
         radiiDifferenceswithError(k)), 1:size(pairs, 1));
 
-options = optimoptions('lsqnonlin');
+options = optimoptions('lsqnonlin', 'Display', 'off');
 
+
+objFun = @(p) arrayfun(@(k) (norm(p - selectedSatPositions(pairs(k,1),:)) - ...
+                            norm(p - selectedSatPositions(pairs(k,2),:)) - ...
+                            TDOAswithError(k)*c), 1:size(pairs,1));
+
+%% Original NLS Solution
 estUEPosTDOAError = lsqnonlin(ObjectiveEstimationErrorTDOA, ...
-                                    initialGuess(1:3), ...
-                                    lowerBound, ...
-                                    upperBound, ...
-                                    options);
+                             initialGuess(1:3), ...
+                             lowerBound, ...
+                             upperBound, ...
+                             options);
 localizationErrorNLS = norm(estUEPosTDOAError(1:3) - actualUEPosition);
 
-%% TWLS
+%% Added Optimization Algorithms (NEW SECTION)
+% 1. Levenberg-Marquardt
+optionsLM = optimoptions('lsqnonlin', 'Algorithm', 'levenberg-marquardt', 'Display', 'off');
+estLM = lsqnonlin(ObjectiveEstimationErrorTDOA, initialGuess(1:3), lowerBound, upperBound, optionsLM);
+errorLM = norm(estLM - actualUEPosition);
+
+% 2. Particle Swarm Optimization
+if exist('particleswarm', 'file')
+    optionsPSO = optimoptions('particleswarm', 'SwarmSize', 100, 'Display', 'off');
+    objPSO = @(p) sum(ObjectiveEstimationErrorTDOA(p).^2);
+    estPSO = particleswarm(objPSO, 3, lowerBound, upperBound, optionsPSO);
+    errorPSO = norm(estPSO - actualUEPosition);
+else
+    errorPSO = NaN;
+end
+
+% 3. Huber Robust Estimator
+k = 1.345; % Huber parameter
+huberObj = @(p) sum((abs(objFun(p)) <= k).*0.5.*objFun(p).^2 + ...
+                   (abs(objFun(p)) > k).*(k*abs(objFun(p)) - 0.5*k^2));
+optionsHuber = optimoptions('fminunc', 'Algorithm', 'quasi-newton', 'Display', 'off');
+estHuber = fminunc(huberObj, initialGuess(1:3), optionsHuber);
+errorHuber = norm(estHuber - actualUEPosition);
+
+% 4. Regularized Least Squares
+lambda = 0.1; % Regularization parameter
+regObj = @(p) [ObjectiveEstimationErrorTDOA(p), lambda*norm(p - initialGuess(1:3))];
+estReg = lsqnonlin(regObj, initialGuess(1:3), lowerBound, upperBound, options);
+errorReg = norm(estReg - actualUEPosition);
+
+%% TWLS (Your original code remains unchanged)
 [p_est, residual] = TWLSoptimizer(selectedSatPositions, TDOAswithError, pairs, covarianceMatrices, ...
-                                    initialGuess, 5, 1e-9, c);
-
-% Display results
-disp('NonLin LS Localization Error (meters):');
-disp(localizationErrorNLS);
-
+                                 initialGuess, 5, 1e-9, c);
 localizationErrorTWLS = norm(p_est - actualUEPosition);
-    disp('TWLS Localization Error (meters):');
-    disp(localizationErrorTWLS);
+
+%% Display Results (Modified to show all errors)
+disp('=== Localization Errors (meters) ===');
+disp(['NLS: ', num2str(localizationErrorNLS)]);
+disp(['Levenberg-Marquardt: ', num2str(errorLM)]);
+disp(['Particle Swarm: ', num2str(errorPSO)]);
+disp(['Huber Robust: ', num2str(errorHuber)]);
+disp(['Regularized LS: ', num2str(errorReg)]);
+disp(['TWLS: ', num2str(localizationErrorTWLS)]);
+
+
 
 
