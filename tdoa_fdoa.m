@@ -21,7 +21,7 @@ gsUE = groundStation(satscene, ...
 
 c = physconst("LightSpeed");
 
-carrierFreq = 10e9; % 10 GHz
+carrierFreq = 1e18; % 10 GHz
 
 %% Find the access intervals
 ac = access(constellation,gsUE);
@@ -153,12 +153,6 @@ upperBound = [(earthRadius + altitudeMax), ...
 disp('NonLin LS Localization Error (meters):');
 disp(localizationErrorNLS);
 
-[estUEPosTDOAError2, localizationErrorNLS] = NLSoptimizer( ...
-    selectedSatPositions, pairs, radiiDifferenceswithError, estUEPosTDOAError, lowerBound, upperBound, ueStationECEF);
-
-disp('NonLin LS Localization Error (meters):');
-disp(localizationErrorNLS);
-
 %% FDOA 
 stdFOAError = 0; % Standard deviation of FOA noise in Hz
 
@@ -200,8 +194,14 @@ disp('Estimated Position:');
 disp(estimatedPosition);
 
 localizationErrorTDOAFDOA = norm(estimatedPosition - ueStationECEF);
-    disp('TDOA-FDOA Localization Error (meters):');
-    disp(localizationErrorTDOAFDOA);
+disp('TDOA-FDOA Localization Error (meters):');
+disp(localizationErrorTDOAFDOA);
+
+
+uePosition = fdoaLocalization(ueStationECEF, selectedSatPositions, accessedSatVelocities.', FDOAsNoisy, carrierFreq, lowerBound, upperBound);
+localizationErrorTDOAFDOA = norm(uePosition - ueStationECEF);
+disp('TDOA-FDOA Localization Error (meters):');
+disp(localizationErrorTDOAFDOA);
 
 function error = objectiveTDOAFDOA(p, selectedSatPositions, accessedSatVelocities, pairs, TDOAs, FDOAs, f_c, c)
     error = zeros(size(pairs, 1) * 2, 1); 
@@ -226,6 +226,46 @@ function error = objectiveTDOAFDOA(p, selectedSatPositions, accessedSatVelocitie
         fdoa_pred = (f_c / c) * (dot(v1, r1) / d1 - dot(v2, r2) / d2);
         error(size(pairs, 1) + k) = FDOAs(k) - fdoa_pred;
     end
+end
+
+function uePosition = fdoaLocalization(ueInitial, satPositions, satVelocities, fdoaMeasurements, carrierFreq, lowerBound, upperBound)
+    % Inputs:
+    % satPositions: Nx3 matrix of satellite positions (ECEF)
+    % satVelocities: Nx3 matrix of satellite velocities
+    % fdoaMeasurements: Mx1 vector of FDOA measurements
+    % carrierFreq: Carrier frequency (Hz)
+    
+    c = physconst('LightSpeed'); % Speed of light
+    
+    % Initial guess for UE position
+    uePosition = ueInitial; % Adjust based on prior knowledge
+    
+    % Objective function
+    objective = @(uePos) computeFDOAError(uePos, satPositions, satVelocities, fdoaMeasurements, carrierFreq, c);
+    
+    % Solve using nonlinear least squares
+    options = optimoptions('lsqnonlin');
+    uePosition = lsqnonlin(objective, uePosition, lowerBound, upperBound, options);
+end
+
+function error = computeFDOAError(uePos, satPositions, satVelocities, fdoaMeasurements, carrierFreq, c)
+    % Compute FDOA errors for a given UE position
+    numSats = size(satPositions, 1);
+    error = zeros(numSats - 1, 1);
+    for i = 1:numSats - 1
+        for j = i+1:numSats
+            vr_i = computeRadialVelocity(uePos, satPositions(i,:), satVelocities(i,:));
+            vr_j = computeRadialVelocity(uePos, satPositions(j,:), satVelocities(j,:));
+            fdoaPredicted = carrierFreq * (vr_i - vr_j) / c;
+            error(i) = fdoaMeasurements(i) - fdoaPredicted;
+        end
+    end
+end
+
+function vr = computeRadialVelocity(uePos, satPos, satVel)
+    % Compute relative radial velocity
+    relativePos = satPos - uePos;
+    vr = dot(relativePos, satVel) / norm(relativePos);
 end
 
 
