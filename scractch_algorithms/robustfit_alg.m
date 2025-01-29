@@ -5,7 +5,7 @@ clc; clear; close all;
 c = 3e8;                    % Speed of light (m/s)
 sigma_TDoA = 5e-9;          % TDoA noise std (5 ns)
 sigma_clock = 1e-9;         % Clock jitter std (1 ns)
-num_sats = 6;               % Use 6 satellites (now 5 TDoA measurements)
+num_sats = 5;               % Use 6 satellites (now 5 TDoA measurements)
 numTrials = 1000;            % Monte Carlo trials
 maxIter = 10;               % Max iterations for RobustFit
 rng(42);                    % Seed for reproducibility

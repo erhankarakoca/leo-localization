@@ -4,8 +4,8 @@ clc; clear; close all;
 %% 1. Simulation Parameters
 c = physconst("lightspeed");                    % Speed of light (m/s)
 sigma_TDoA = 2e-9;%1e-9;          % TDoA noise std (5 ns)
-sigma_clock = 1e-9;         % Clock jitter std (1 ns)
-num_sats = 6;               % Number of satellites
+sigma_clock = 1e-6;         % Clock jitter std (1 ns)
+num_sats = 5;               % Number of satellites
 numTrials = 1000;            % Monte Carlo trials
 rng(42);                    % Seed for reproducibility  
 
@@ -13,8 +13,8 @@ rng(42);                    % Seed for reproducibility
 true_P = [1000; 2000; 3000];
 
 % Generate satellites in a tetrahedral configuration (good geometry)
-S = 1e7 * [1, 1, 1; -1, -1, 1; -1, 1, -1; 1, -1, -1]; 
-%S = 1e7 * [1, 1, 1; -1, -1, 1; -1, 1, -1; 1, -1, -1; 0, 0, 1; 0, 1, 0]; 
+% S = 1e7 * [1, 1, 1; -1, -1, 1; -1, 1, -1; 1, -1, -1]; 
+S = 1e7 * [1, 1, 1; -1, -1, 1; -1, 1, -1; 1, -1, -1; 0, 0, 1; 0, 1, 0]; 
 
 % Total noise variance (TDoA + 2*clock jitter)
 sigma_total = sqrt(sigma_TDoA^2 + 2 * sigma_clock^2);
